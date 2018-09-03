@@ -1348,6 +1348,7 @@ static inline CGFloat mgEaseInOutBounce(CGFloat t, CGFloat b, CGFloat c) {
 {
     CGPoint current = [gesture translationInView:self];
     
+    if (gesture.state == UIGestureRecognizerStateBegan) {
         [self invalidateDisplayLink];
 
         if (!_preservesSelectionStatus)
