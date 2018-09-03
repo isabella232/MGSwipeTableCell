@@ -607,6 +607,8 @@ static inline CGFloat mgEaseInOutBounce(CGFloat t, CGFloat b, CGFloat c) {
     UIPanGestureRecognizer * _panRecognizer;
     CGPoint _panStartPoint;
     CGFloat _panStartOffset;
+    CGFloat _panLastPoint;
+    CGFloat _panDirection;
     CGFloat _targetOffset;
     
     UIView * _swipeOverlay;
@@ -1157,11 +1159,17 @@ static inline CGFloat mgEaseInOutBounce(CGFloat t, CGFloat b, CGFloat c) {
         view.transform = CGAffineTransformMakeTranslation(translation, 0);
 
         if (view != activeButtons) continue; //only transition if active (perf. improvement)
+        
         bool expand = expansions[i].buttonIndex >= 0 && offset > view.bounds.size.width * expansions[i].threshold;
         if (expand) {
             [view expandToOffset:offset settings:expansions[i]];
             _targetOffset = expansions[i].fillOnTrigger ? self.bounds.size.width * sign : 0;
-            _activeExpansion = view;
+            // Continue the expansion only if the motion is not in contra direction.
+            if ((_panDirection * sign) > 0.0) {
+                _activeExpansion = view;
+            } else {
+                _activeExpansion = nil;
+            }
             [self updateState:i ? MGSwipeStateExpandingRightToLeft : MGSwipeStateExpandingLeftToRight];
         }
         else {
@@ -1340,13 +1348,13 @@ static inline CGFloat mgEaseInOutBounce(CGFloat t, CGFloat b, CGFloat c) {
 {
     CGPoint current = [gesture translationInView:self];
     
-    if (gesture.state == UIGestureRecognizerStateBegan) {
         [self invalidateDisplayLink];
 
         if (!_preservesSelectionStatus)
             self.highlighted = NO;
         [self createSwipeViewIfNeeded];
         _panStartPoint = current;
+        _panLastPoint = current.x;
         _panStartOffset = _swipeOffset;
         if (_swipeOffset != 0) {
             _firstSwipeState = _swipeOffset > 0 ? MGSwipeStateSwipingLeftToRight : MGSwipeStateSwipingRightToLeft;
@@ -1366,6 +1374,8 @@ static inline CGFloat mgEaseInOutBounce(CGFloat t, CGFloat b, CGFloat c) {
         if (_firstSwipeState == MGSwipeStateNone) {
             _firstSwipeState = offset > 0 ? MGSwipeStateSwipingLeftToRight : MGSwipeStateSwipingRightToLeft;
         }
+        _panDirection = (current.x - _panLastPoint) > 0 ? 1.0 : -1.0;
+        _panLastPoint = current.x;
         self.swipeOffset = [self filterSwipe:offset];
     }
     else {
